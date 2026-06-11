@@ -1,96 +1,85 @@
 import json
 import streamlit as st
 from openai import OpenAI
-import folium
-from streamlit_folium import st_folium
-from geopy.geocoders import Nominatim
-from geopy.exc import GeocoderTimedOut
 
 # ── Season themes ──────────────────────────────────────────────────────────────
 THEMES = {
     "🌸 봄": {
-        "bg":        "#fff0f5",
-        "sidebar":   "#ffe4ef",
-        "msg_user":  "#ffd6e7",
-        "msg_ai":    "#fff9fb",
-        "accent":    "#e75480",
-        "text":      "#4a1030",
-        "border":    "#f9a8c9",
-        "input_bg":  "#fff0f5",
-        "btn_bg":    "#f472b6",
-        "btn_text":  "#ffffff",
-        "dot":       "#e75480",
+        "bg":       "#fff0f5",
+        "sidebar":  "#ffe4ef",
+        "msg_user": "#ffd6e7",
+        "msg_ai":   "#fff9fb",
+        "text":     "#4a1030",
+        "border":   "#f9a8c9",
+        "input_bg": "#fff0f5",
+        "btn_bg":   "#f472b6",
+        "btn_text": "#ffffff",
+        "dot":      "#e75480",
     },
     "☀️ 여름": {
-        "bg":        "#e8f8ff",
-        "sidebar":   "#b3ecff",
-        "msg_user":  "#7dd3fc",
-        "msg_ai":    "#f0faff",
-        "accent":    "#0284c7",
-        "text":      "#0c3547",
-        "border":    "#38bdf8",
-        "input_bg":  "#e8f8ff",
-        "btn_bg":    "#0ea5e9",
-        "btn_text":  "#ffffff",
-        "dot":       "#0284c7",
+        "bg":       "#e8f8ff",
+        "sidebar":  "#b3ecff",
+        "msg_user": "#7dd3fc",
+        "msg_ai":   "#f0faff",
+        "text":     "#0c3547",
+        "border":   "#38bdf8",
+        "input_bg": "#e8f8ff",
+        "btn_bg":   "#0ea5e9",
+        "btn_text": "#ffffff",
+        "dot":      "#0284c7",
     },
     "🍂 가을": {
-        "bg":        "#fff7ed",
-        "sidebar":   "#fde8cc",
-        "msg_user":  "#fdba74",
-        "msg_ai":    "#fffbf5",
-        "accent":    "#c2410c",
-        "text":      "#431407",
-        "border":    "#fb923c",
-        "input_bg":  "#fff7ed",
-        "btn_bg":    "#ea580c",
-        "btn_text":  "#ffffff",
-        "dot":       "#c2410c",
+        "bg":       "#fff7ed",
+        "sidebar":  "#fde8cc",
+        "msg_user": "#fdba74",
+        "msg_ai":   "#fffbf5",
+        "text":     "#431407",
+        "border":   "#fb923c",
+        "input_bg": "#fff7ed",
+        "btn_bg":   "#ea580c",
+        "btn_text": "#ffffff",
+        "dot":      "#c2410c",
     },
     "❄️ 겨울": {
-        "bg":        "#f0f4ff",
-        "sidebar":   "#dbe4ff",
-        "msg_user":  "#a5b4fc",
-        "msg_ai":    "#f8f9ff",
-        "accent":    "#3730a3",
-        "text":      "#1e1b4b",
-        "border":    "#818cf8",
-        "input_bg":  "#f0f4ff",
-        "btn_bg":    "#4f46e5",
-        "btn_text":  "#ffffff",
-        "dot":       "#3730a3",
+        "bg":       "#f0f4ff",
+        "sidebar":  "#dbe4ff",
+        "msg_user": "#a5b4fc",
+        "msg_ai":   "#f8f9ff",
+        "text":     "#1e1b4b",
+        "border":   "#818cf8",
+        "input_bg": "#f0f4ff",
+        "btn_bg":   "#4f46e5",
+        "btn_text": "#ffffff",
+        "dot":      "#3730a3",
     },
     "🌙 밤": {
-        "bg":        "#0f0f1a",
-        "sidebar":   "#1a1a2e",
-        "msg_user":  "#2d2b55",
-        "msg_ai":    "#16213e",
-        "accent":    "#a78bfa",
-        "text":      "#e2e8f0",
-        "border":    "#4c1d95",
-        "input_bg":  "#1a1a2e",
-        "btn_bg":    "#7c3aed",
-        "btn_text":  "#ffffff",
-        "dot":       "#a78bfa",
+        "bg":       "#0f0f1a",
+        "sidebar":  "#1a1a2e",
+        "msg_user": "#2d2b55",
+        "msg_ai":   "#16213e",
+        "text":     "#e2e8f0",
+        "border":   "#4c1d95",
+        "input_bg": "#1a1a2e",
+        "btn_bg":   "#7c3aed",
+        "btn_text": "#ffffff",
+        "dot":      "#a78bfa",
     },
     "🌿 숲": {
-        "bg":        "#f0fdf4",
-        "sidebar":   "#dcfce7",
-        "msg_user":  "#86efac",
-        "msg_ai":    "#f7fef9",
-        "accent":    "#166534",
-        "text":      "#052e16",
-        "border":    "#4ade80",
-        "input_bg":  "#f0fdf4",
-        "btn_bg":    "#16a34a",
-        "btn_text":  "#ffffff",
-        "dot":       "#166534",
+        "bg":       "#f0fdf4",
+        "sidebar":  "#dcfce7",
+        "msg_user": "#86efac",
+        "msg_ai":   "#f7fef9",
+        "text":     "#052e16",
+        "border":   "#4ade80",
+        "input_bg": "#f0fdf4",
+        "btn_bg":   "#16a34a",
+        "btn_text": "#ffffff",
+        "dot":      "#166534",
     },
 }
 
 BASE_CSS = """
 <style>
-/* ── layout ── */
 [data-testid="stAppViewContainer"] {{
     background-color: {bg} !important;
     color: {text} !important;
@@ -99,8 +88,6 @@ BASE_CSS = """
     background-color: {sidebar} !important;
 }}
 [data-testid="stSidebar"] * {{ color: {text} !important; }}
-
-/* ── chat bubbles ── */
 [data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) {{
     background-color: {msg_user} !important;
     border: 1px solid {border};
@@ -111,31 +98,19 @@ BASE_CSS = """
     border: 1px solid {border};
     border-radius: 16px;
 }}
-
-/* ── inputs ── */
 [data-testid="stTextInput"] input,
 [data-testid="stChatInput"] textarea {{
     background-color: {input_bg} !important;
     color: {text} !important;
     border-color: {border} !important;
 }}
-
-/* ── buttons ── */
 [data-testid="stButton"] > button {{
     background-color: {btn_bg} !important;
     color: {btn_text} !important;
     border: none !important;
     border-radius: 8px !important;
 }}
-
-/* ── typing dots ── */
 .typing-indicator span {{ background: {dot} !important; }}
-
-/* ── expander / divider accent ── */
-[data-testid="stExpander"] {{
-    border: 1px solid {border} !important;
-    border-radius: 10px !important;
-}}
 hr {{ border-color: {border} !important; }}
 </style>
 """
@@ -155,13 +130,6 @@ TYPING_CSS = """
     0%, 80%, 100% { transform: scale(0.7); opacity: 0.5; }
     40%            { transform: scale(1.1); opacity: 1;   }
 }
-.sticker {
-    font-size: 72px;
-    line-height: 1.1;
-    display: inline-block;
-    padding: 6px;
-    filter: drop-shadow(2px 2px 4px rgba(0,0,0,0.15));
-}
 </style>
 """
 
@@ -170,25 +138,6 @@ TYPING_HTML = """
     <span></span><span></span><span></span>
 </div>
 """
-
-STICKER_CATEGORIES = {
-    "동물 🐾": ["🐶","🐱","🐭","🐹","🐰","🦊","🐻","🐼","🐨","🐯","🦁","🐸","🐙","🦋","🐧","🦆"],
-    "표정 😊": ["🥰","😘","🤩","😜","🤪","😴","🥺","😭","🤗","😇","🥳","😤","🫶","🤭","😋","🤓"],
-    "음식 🍰": ["🍕","🍔","🍩","🍪","🎂","🍰","🧁","🍓","🍑","🍒","🍦","🧃","🧋","🍜","🥐","🍡"],
-    "기타 ✨": ["🌈","⭐","🌸","🌺","🎀","💝","🎈","🎁","✨","💫","🌙","☀️","🍀","🦄","💎","🫧"],
-}
-
-STICKER_PREFIX = "__sticker__"
-
-
-def render_message(message: dict):
-    content = message["content"]
-    if content.startswith(STICKER_PREFIX):
-        sticker = content[len(STICKER_PREFIX):]
-        st.markdown(f'<span class="sticker">{sticker}</span>', unsafe_allow_html=True)
-    else:
-        st.markdown(content)
-
 
 # ── Page config ────────────────────────────────────────────────────────────────
 st.set_page_config(page_title="💬 Chatbot", layout="centered")
@@ -271,69 +220,9 @@ else:
     if "messages" not in st.session_state:
         st.session_state.messages = []
 
-    # Display chat history
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
-            render_message(message)
-
-    # ── Map ────────────────────────────────────────────────────────────────────
-    with st.expander("🗺️ 지도 검색", expanded=False):
-        location_query = st.text_input(
-            "장소를 입력하세요",
-            placeholder="예: 경복궁, 도쿄 타워, Eiffel Tower",
-            key="map_query",
-        )
-        search_clicked = st.button("검색", key="map_search")
-
-        if "map_location" not in st.session_state:
-            st.session_state.map_location = {"lat": 37.5665, "lon": 126.9780, "name": "서울"}
-
-        if search_clicked and location_query:
-            try:
-                geolocator = Nominatim(user_agent="streamlit-chatbot")
-                geo = geolocator.geocode(location_query, timeout=10)
-                if geo:
-                    st.session_state.map_location = {
-                        "lat": geo.latitude,
-                        "lon": geo.longitude,
-                        "name": geo.address,
-                    }
-                else:
-                    st.warning("장소를 찾을 수 없습니다. 다른 키워드로 시도해보세요.")
-            except GeocoderTimedOut:
-                st.error("검색 시간이 초과됐습니다. 다시 시도해주세요.")
-
-        loc = st.session_state.map_location
-        m = folium.Map(location=[loc["lat"], loc["lon"]], zoom_start=14)
-        folium.Marker(
-            location=[loc["lat"], loc["lon"]],
-            popup=folium.Popup(loc["name"], max_width=250),
-            tooltip=loc["name"],
-            icon=folium.Icon(color="red", icon="heart", prefix="fa"),
-        ).add_to(m)
-        st_folium(m, width="100%", height=400, returned_objects=[])
-
-    # ── Sticker picker ─────────────────────────────────────────────────────────
-    with st.expander("🎀 스티커", expanded=False):
-        tab_names = list(STICKER_CATEGORIES.keys())
-        tabs = st.tabs(tab_names)
-        for tab, category in zip(tabs, tab_names):
-            with tab:
-                stickers = STICKER_CATEGORIES[category]
-                cols = st.columns(8)
-                for i, sticker in enumerate(stickers):
-                    if cols[i % 8].button(sticker, key=f"sticker_{category}_{i}"):
-                        st.session_state["pending_sticker"] = sticker
-
-    # ── Chat input ─────────────────────────────────────────────────────────────
-    pending_sticker = st.session_state.pop("pending_sticker", None)
-
-    if pending_sticker:
-        content = STICKER_PREFIX + pending_sticker
-        st.session_state.messages.append({"role": "user", "content": content})
-        with st.chat_message("user"):
-            st.markdown(f'<span class="sticker">{pending_sticker}</span>', unsafe_allow_html=True)
-        st.rerun()
+            st.markdown(message["content"])
 
     if prompt := st.chat_input("What is up?"):
         st.session_state.messages.append({"role": "user", "content": prompt})
@@ -341,18 +230,16 @@ else:
             st.markdown(prompt)
 
         try:
-            api_messages = [
-                {"role": m["role"], "content": m["content"].replace(STICKER_PREFIX, "[스티커] ")}
-                for m in st.session_state.messages
-            ]
-
             with st.chat_message("assistant"):
                 typing_placeholder = st.empty()
                 typing_placeholder.markdown(TYPING_HTML, unsafe_allow_html=True)
 
                 stream = client.chat.completions.create(
                     model=model,
-                    messages=api_messages,
+                    messages=[
+                        {"role": m["role"], "content": m["content"]}
+                        for m in st.session_state.messages
+                    ],
                     temperature=temperature,
                     stream=True,
                 )

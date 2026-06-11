@@ -1,5 +1,2 @@
 streamlit
 openai
-folium
-streamlit-folium
-geopy
