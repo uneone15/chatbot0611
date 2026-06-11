@@ -1,6 +1,10 @@
 import json
 import streamlit as st
 from openai import OpenAI
+import folium
+from streamlit_folium import st_folium
+from geopy.geocoders import Nominatim
+from geopy.exc import GeocoderTimedOut
 
 TYPING_CSS = """
 <style>
@@ -131,6 +135,39 @@ else:
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
             render_message(message)
+
+    # ── Map ────────────────────────────────────────────────────────────────────
+    with st.expander("🗺️ 지도 검색", expanded=False):
+        location_query = st.text_input("장소를 입력하세요", placeholder="예: 경복궁, 도쿄 타워, Eiffel Tower", key="map_query")
+        search_clicked = st.button("검색", key="map_search")
+
+        if "map_location" not in st.session_state:
+            st.session_state.map_location = {"lat": 37.5665, "lon": 126.9780, "name": "서울"}
+
+        if search_clicked and location_query:
+            try:
+                geolocator = Nominatim(user_agent="streamlit-chatbot")
+                geo = geolocator.geocode(location_query, timeout=10)
+                if geo:
+                    st.session_state.map_location = {
+                        "lat": geo.latitude,
+                        "lon": geo.longitude,
+                        "name": geo.address,
+                    }
+                else:
+                    st.warning("장소를 찾을 수 없습니다. 다른 키워드로 시도해보세요.")
+            except GeocoderTimedOut:
+                st.error("검색 시간이 초과됐습니다. 다시 시도해주세요.")
+
+        loc = st.session_state.map_location
+        m = folium.Map(location=[loc["lat"], loc["lon"]], zoom_start=14)
+        folium.Marker(
+            location=[loc["lat"], loc["lon"]],
+            popup=folium.Popup(loc["name"], max_width=250),
+            tooltip=loc["name"],
+            icon=folium.Icon(color="red", icon="heart", prefix="fa"),
+        ).add_to(m)
+        st_folium(m, width="100%", height=400, returned_objects=[])
 
     # ── Sticker picker ─────────────────────────────────────────────────────────
     with st.expander("🎀 스티커", expanded=False):
