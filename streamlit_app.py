@@ -2,13 +2,54 @@ import json
 import streamlit as st
 from openai import OpenAI
 
-st.title("💬 Chatbot")
-st.write(
-    "This is a simple chatbot using OpenAI's models. "
-    "To use this app, you need to provide an OpenAI API key, which you can get [here](https://platform.openai.com/account/api-keys)."
-)
+# ── Dark / Light mode CSS ──────────────────────────────────────────────────────
+DARK_CSS = """
+<style>
+[data-testid="stAppViewContainer"] { background-color: #1e1e2e; color: #cdd6f4; }
+[data-testid="stSidebar"] { background-color: #181825; }
+[data-testid="stChatMessage"] { background-color: #313244; border-radius: 10px; }
+.stTextInput input, .stSelectbox div { background-color: #313244 !important; color: #cdd6f4 !important; }
+</style>
+"""
 
-# Sidebar settings
+LIGHT_CSS = """
+<style>
+[data-testid="stAppViewContainer"] { background-color: #ffffff; color: #1e1e2e; }
+[data-testid="stSidebar"] { background-color: #f4f4f5; }
+[data-testid="stChatMessage"] { background-color: #f0f0f5; border-radius: 10px; }
+</style>
+"""
+
+TYPING_CSS = """
+<style>
+.typing-indicator {
+    display: flex; align-items: center; gap: 4px; padding: 8px 4px;
+}
+.typing-indicator span {
+    width: 8px; height: 8px; border-radius: 50%; background: #888;
+    animation: bounce 1.2s infinite ease-in-out;
+}
+.typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+.typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes bounce {
+    0%, 80%, 100% { transform: scale(0.7); opacity: 0.5; }
+    40% { transform: scale(1.1); opacity: 1; }
+}
+</style>
+"""
+
+TYPING_HTML = """
+<div class="typing-indicator">
+    <span></span><span></span><span></span>
+</div>
+"""
+
+EMOJI_LIST = ["😀","😂","😍","🤔","👍","👎","🙏","🔥","❤️","😢","😮","🎉","🤣","😎","💯","✅","❌","⭐","🚀","💡"]
+
+# ── Page config ────────────────────────────────────────────────────────────────
+st.set_page_config(page_title="💬 Chatbot", layout="centered")
+
+# ── Sidebar ────────────────────────────────────────────────────────────────────
 with st.sidebar:
     st.header("Settings")
 
@@ -28,6 +69,10 @@ with st.sidebar:
         step=0.1,
         help="낮을수록 일관된 답변, 높을수록 창의적인 답변",
     )
+
+    st.divider()
+
+    dark_mode = st.toggle("Dark mode", value=False)
 
     st.divider()
 
@@ -62,6 +107,17 @@ with st.sidebar:
         use_container_width=True,
     )
 
+# ── Apply theme CSS ────────────────────────────────────────────────────────────
+st.markdown(TYPING_CSS, unsafe_allow_html=True)
+st.markdown(DARK_CSS if dark_mode else LIGHT_CSS, unsafe_allow_html=True)
+
+# ── Main ───────────────────────────────────────────────────────────────────────
+st.title("💬 Chatbot")
+st.write(
+    "This is a simple chatbot using OpenAI's models. "
+    "To use this app, you need to provide an OpenAI API key, which you can get [here](https://platform.openai.com/account/api-keys)."
+)
+
 if not openai_api_key:
     st.info("Please add your OpenAI API key in the sidebar to continue.", icon="🗝️")
 else:
@@ -70,27 +126,48 @@ else:
     if "messages" not in st.session_state:
         st.session_state.messages = []
 
+    # Display chat history
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
 
-    if prompt := st.chat_input("What is up?"):
+    # ── Emoji picker ───────────────────────────────────────────────────────────
+    with st.expander("😊 Emoji", expanded=False):
+        cols = st.columns(10)
+        for i, emoji in enumerate(EMOJI_LIST):
+            if cols[i % 10].button(emoji, key=f"emoji_{i}"):
+                st.session_state["emoji_input"] = st.session_state.get("emoji_input", "") + emoji
+
+    # ── Chat input ─────────────────────────────────────────────────────────────
+    emoji_prefix = st.session_state.pop("emoji_input", "")
+
+    raw_input = st.chat_input("What is up?")
+    prompt = (emoji_prefix + (raw_input or "")).strip() if (emoji_prefix or raw_input) else None
+
+    if prompt:
         st.session_state.messages.append({"role": "user", "content": prompt})
         with st.chat_message("user"):
             st.markdown(prompt)
 
         try:
-            stream = client.chat.completions.create(
-                model=model,
-                messages=[
-                    {"role": m["role"], "content": m["content"]}
-                    for m in st.session_state.messages
-                ],
-                temperature=temperature,
-                stream=True,
-            )
+            # Typing indicator
             with st.chat_message("assistant"):
+                typing_placeholder = st.empty()
+                typing_placeholder.markdown(TYPING_HTML, unsafe_allow_html=True)
+
+                stream = client.chat.completions.create(
+                    model=model,
+                    messages=[
+                        {"role": m["role"], "content": m["content"]}
+                        for m in st.session_state.messages
+                    ],
+                    temperature=temperature,
+                    stream=True,
+                )
+
+                typing_placeholder.empty()
                 response = st.write_stream(stream)
+
             st.session_state.messages.append({"role": "assistant", "content": response})
 
         except Exception as e:
