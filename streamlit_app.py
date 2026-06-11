@@ -17,6 +17,13 @@ TYPING_CSS = """
     0%, 80%, 100% { transform: scale(0.7); opacity: 0.5; }
     40% { transform: scale(1.1); opacity: 1; }
 }
+.sticker {
+    font-size: 72px;
+    line-height: 1.1;
+    display: inline-block;
+    padding: 6px;
+    filter: drop-shadow(2px 2px 4px rgba(0,0,0,0.15));
+}
 </style>
 """
 
@@ -25,6 +32,25 @@ TYPING_HTML = """
     <span></span><span></span><span></span>
 </div>
 """
+
+STICKER_CATEGORIES = {
+    "동물 🐾": ["🐶","🐱","🐭","🐹","🐰","🦊","🐻","🐼","🐨","🐯","🦁","🐸","🐙","🦋","🐧","🦆"],
+    "표정 😊": ["🥰","😘","🤩","😜","🤪","😴","🥺","😭","🤗","😇","🥳","😤","🫶","🤭","😋","🤓"],
+    "음식 🍰": ["🍕","🍔","🍩","🍪","🎂","🍰","🧁","🍓","🍑","🍒","🍦","🧃","🧋","🍜","🥐","🍡"],
+    "기타 ✨": ["🌈","⭐","🌸","🌺","🎀","💝","🎈","🎁","✨","💫","🌙","☀️","🍀","🦄","💎","🫧"],
+}
+
+STICKER_PREFIX = "__sticker__"
+
+
+def render_message(message: dict):
+    content = message["content"]
+    if content.startswith(STICKER_PREFIX):
+        sticker = content[len(STICKER_PREFIX):]
+        st.markdown(f'<span class="sticker">{sticker}</span>', unsafe_allow_html=True)
+    else:
+        st.markdown(content)
+
 
 # ── Page config ────────────────────────────────────────────────────────────────
 st.set_page_config(page_title="💬 Chatbot", layout="centered")
@@ -83,7 +109,7 @@ with st.sidebar:
         use_container_width=True,
     )
 
-# ── Apply theme CSS ────────────────────────────────────────────────────────────
+# ── Apply CSS ──────────────────────────────────────────────────────────────────
 st.markdown(TYPING_CSS, unsafe_allow_html=True)
 
 # ── Main ───────────────────────────────────────────────────────────────────────
@@ -104,7 +130,29 @@ else:
     # Display chat history
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
-            st.markdown(message["content"])
+            render_message(message)
+
+    # ── Sticker picker ─────────────────────────────────────────────────────────
+    with st.expander("🎀 스티커", expanded=False):
+        tab_names = list(STICKER_CATEGORIES.keys())
+        tabs = st.tabs(tab_names)
+        for tab, category in zip(tabs, tab_names):
+            with tab:
+                stickers = STICKER_CATEGORIES[category]
+                cols = st.columns(8)
+                for i, sticker in enumerate(stickers):
+                    if cols[i % 8].button(sticker, key=f"sticker_{category}_{i}"):
+                        st.session_state["pending_sticker"] = sticker
+
+    # ── Chat input ─────────────────────────────────────────────────────────────
+    pending_sticker = st.session_state.pop("pending_sticker", None)
+
+    if pending_sticker:
+        content = STICKER_PREFIX + pending_sticker
+        st.session_state.messages.append({"role": "user", "content": content})
+        with st.chat_message("user"):
+            st.markdown(f'<span class="sticker">{pending_sticker}</span>', unsafe_allow_html=True)
+        st.rerun()
 
     if prompt := st.chat_input("What is up?"):
         st.session_state.messages.append({"role": "user", "content": prompt})
@@ -112,17 +160,18 @@ else:
             st.markdown(prompt)
 
         try:
-            # Typing indicator
+            api_messages = [
+                {"role": m["role"], "content": m["content"].replace(STICKER_PREFIX, "[스티커] ")}
+                for m in st.session_state.messages
+            ]
+
             with st.chat_message("assistant"):
                 typing_placeholder = st.empty()
                 typing_placeholder.markdown(TYPING_HTML, unsafe_allow_html=True)
 
                 stream = client.chat.completions.create(
                     model=model,
-                    messages=[
-                        {"role": m["role"], "content": m["content"]}
-                        for m in st.session_state.messages
-                    ],
+                    messages=api_messages,
                     temperature=temperature,
                     stream=True,
                 )
