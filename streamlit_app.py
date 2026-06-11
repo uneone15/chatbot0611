@@ -26,8 +26,6 @@ TYPING_HTML = """
 </div>
 """
 
-EMOJI_LIST = ["😀","😂","😍","🤔","👍","👎","🙏","🔥","❤️","😢","😮","🎉","🤣","😎","💯","✅","❌","⭐","🚀","💡"]
-
 # ── Page config ────────────────────────────────────────────────────────────────
 st.set_page_config(page_title="💬 Chatbot", layout="centered")
 
@@ -108,20 +106,7 @@ else:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
 
-    # ── Emoji picker ───────────────────────────────────────────────────────────
-    with st.expander("😊 Emoji", expanded=False):
-        cols = st.columns(10)
-        for i, emoji in enumerate(EMOJI_LIST):
-            if cols[i % 10].button(emoji, key=f"emoji_{i}"):
-                st.session_state["emoji_input"] = st.session_state.get("emoji_input", "") + emoji
-
-    # ── Chat input ─────────────────────────────────────────────────────────────
-    emoji_prefix = st.session_state.pop("emoji_input", "")
-
-    raw_input = st.chat_input("What is up?")
-    prompt = (emoji_prefix + (raw_input or "")).strip() if (emoji_prefix or raw_input) else None
-
-    if prompt:
+    if prompt := st.chat_input("What is up?"):
         st.session_state.messages.append({"role": "user", "content": prompt})
         with st.chat_message("user"):
             st.markdown(prompt)
