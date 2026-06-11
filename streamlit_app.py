@@ -1,7 +1,9 @@
 import base64
+import io
 import json
 import streamlit as st
 from openai import OpenAI
+from audio_recorder_streamlit import audio_recorder
 
 # ── SVG background patterns (opacity baked into shapes) ────────────────────────
 def _uri(svg: str) -> str:
@@ -399,12 +401,48 @@ else:
 
     if "messages" not in st.session_state:
         st.session_state.messages = []
+    if "last_audio" not in st.session_state:
+        st.session_state.last_audio = None
 
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
 
-    if prompt := st.chat_input("What is up?"):
+    # ── Voice input ────────────────────────────────────────────────────────────
+    col_mic, col_label = st.columns([1, 11])
+    with col_mic:
+        audio_bytes = audio_recorder(
+            text="",
+            recording_color=theme["btn_bg"],
+            neutral_color=theme["border"],
+            icon_size="2x",
+            pause_threshold=2.0,
+        )
+    with col_label:
+        st.caption("🎤 마이크 버튼을 눌러 음성 입력")
+
+    voice_prompt = None
+    if audio_bytes and audio_bytes != st.session_state.last_audio:
+        st.session_state.last_audio = audio_bytes
+        with st.spinner("음성 인식 중..."):
+            try:
+                audio_file = io.BytesIO(audio_bytes)
+                audio_file.name = "voice.wav"
+                transcript = client.audio.transcriptions.create(
+                    model="whisper-1",
+                    file=audio_file,
+                    language="ko",
+                )
+                voice_prompt = transcript.text.strip()
+                if voice_prompt:
+                    st.info(f"인식된 텍스트: **{voice_prompt}**", icon="🎤")
+            except Exception as e:
+                st.error(f"음성 인식 오류: {e}", icon="🚨")
+
+    text_prompt = st.chat_input("What is up?")
+    prompt = voice_prompt or text_prompt or None
+
+    if prompt:
         st.session_state.messages.append({"role": "user", "content": prompt})
         with st.chat_message("user"):
             st.markdown(prompt)
