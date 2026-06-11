@@ -119,16 +119,7 @@ BASE_CSS = """
 [data-testid="stSidebar"] {{
     background-color: {sidebar} !important;
 }}
-[data-testid="stSidebar"] h1,
-[data-testid="stSidebar"] h2,
-[data-testid="stSidebar"] h3,
-[data-testid="stSidebar"] p,
-[data-testid="stSidebar"] label,
-[data-testid="stSidebar"] span,
-[data-testid="stSidebar"] div {{
-    color: {text} !important;
-}}
-[data-testid="stSidebar"] h2 {{
+[data-testid="stSidebar"] * {{
     color: #ffffff !important;
 }}
 
