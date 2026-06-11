@@ -128,6 +128,9 @@ BASE_CSS = """
 [data-testid="stSidebar"] div {{
     color: {text} !important;
 }}
+[data-testid="stSidebar"] h2 {{
+    color: #ffffff !important;
+}}
 
 /* 채팅 버블 — 사용자 */
 [data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) {{
@@ -224,7 +227,7 @@ with st.sidebar:
     theme_name = st.selectbox(
         "채팅 테마 선택",
         options=list(THEMES.keys()),
-        index=0,
+        index=list(THEMES.keys()).index("🌙 밤"),
         label_visibility="collapsed",
     )
 
