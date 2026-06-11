@@ -404,9 +404,32 @@ else:
     if "last_audio" not in st.session_state:
         st.session_state.last_audio = None
 
+    # ── Chat history ───────────────────────────────────────────────────────────
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
-            st.markdown(message["content"])
+            if isinstance(message["content"], list):
+                # vision message: find text part and image parts
+                for part in message["content"]:
+                    if part["type"] == "text":
+                        st.markdown(part["text"])
+                    elif part["type"] == "image_url":
+                        b64 = part["image_url"]["url"].split(",", 1)[1]
+                        st.image(base64.b64decode(b64), width=300)
+            else:
+                st.markdown(message["content"])
+
+    # ── Image upload ───────────────────────────────────────────────────────────
+    vision_supported = model != "gpt-3.5-turbo"
+    uploaded_image = st.file_uploader(
+        "🖼️ 이미지 첨부 (gpt-4o 계열만 지원)",
+        type=["png", "jpg", "jpeg", "webp", "gif"],
+        disabled=not vision_supported,
+        label_visibility="collapsed" if not vision_supported else "visible",
+    )
+    if not vision_supported:
+        st.caption("⚠️ 이미지 첨부는 gpt-4o / gpt-4o-mini 모델에서만 사용 가능합니다.")
+    if uploaded_image:
+        st.image(uploaded_image, caption="첨부된 이미지", width=300)
 
     # ── Voice input ────────────────────────────────────────────────────────────
     col_mic, col_label = st.columns([1, 11])
@@ -439,13 +462,32 @@ else:
             except Exception as e:
                 st.error(f"음성 인식 오류: {e}", icon="🚨")
 
-    text_prompt = st.chat_input("What is up?")
+    text_prompt = st.chat_input("메시지를 입력하세요...")
     prompt = voice_prompt or text_prompt or None
 
-    if prompt:
-        st.session_state.messages.append({"role": "user", "content": prompt})
+    if prompt or (uploaded_image and vision_supported):
+        # Build content: text + optional image
+        if uploaded_image and vision_supported:
+            mime = uploaded_image.type
+            b64_img = base64.b64encode(uploaded_image.read()).decode()
+            content: list | str = [
+                {"type": "text", "text": prompt or "이 이미지를 분석해줘."},
+                {"type": "image_url", "image_url": {"url": f"data:{mime};base64,{b64_img}"}},
+            ]
+        else:
+            content = prompt
+
+        st.session_state.messages.append({"role": "user", "content": content})
         with st.chat_message("user"):
-            st.markdown(prompt)
+            if isinstance(content, list):
+                for part in content:
+                    if part["type"] == "text":
+                        st.markdown(part["text"])
+                    elif part["type"] == "image_url":
+                        b64 = part["image_url"]["url"].split(",", 1)[1]
+                        st.image(base64.b64decode(b64), width=300)
+            else:
+                st.markdown(content)
 
         try:
             with st.chat_message("assistant"):
