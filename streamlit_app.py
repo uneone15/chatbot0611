@@ -332,7 +332,7 @@ with st.sidebar:
     st.subheader("🤖 모델")
     model = st.selectbox(
         "Model",
-        options=["gpt-5.5", "gpt-5.5-instant", "gpt-4o-mini", "gpt-4o", "gpt-3.5-turbo"],
+        options=["gpt-4o", "gpt-4o-mini", "gpt-3.5-turbo"],
         index=0,
         label_visibility="collapsed",
     )
