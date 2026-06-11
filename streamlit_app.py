@@ -6,6 +6,140 @@ from streamlit_folium import st_folium
 from geopy.geocoders import Nominatim
 from geopy.exc import GeocoderTimedOut
 
+# ── Season themes ──────────────────────────────────────────────────────────────
+THEMES = {
+    "🌸 봄": {
+        "bg":        "#fff0f5",
+        "sidebar":   "#ffe4ef",
+        "msg_user":  "#ffd6e7",
+        "msg_ai":    "#fff9fb",
+        "accent":    "#e75480",
+        "text":      "#4a1030",
+        "border":    "#f9a8c9",
+        "input_bg":  "#fff0f5",
+        "btn_bg":    "#f472b6",
+        "btn_text":  "#ffffff",
+        "dot":       "#e75480",
+    },
+    "☀️ 여름": {
+        "bg":        "#e8f8ff",
+        "sidebar":   "#b3ecff",
+        "msg_user":  "#7dd3fc",
+        "msg_ai":    "#f0faff",
+        "accent":    "#0284c7",
+        "text":      "#0c3547",
+        "border":    "#38bdf8",
+        "input_bg":  "#e8f8ff",
+        "btn_bg":    "#0ea5e9",
+        "btn_text":  "#ffffff",
+        "dot":       "#0284c7",
+    },
+    "🍂 가을": {
+        "bg":        "#fff7ed",
+        "sidebar":   "#fde8cc",
+        "msg_user":  "#fdba74",
+        "msg_ai":    "#fffbf5",
+        "accent":    "#c2410c",
+        "text":      "#431407",
+        "border":    "#fb923c",
+        "input_bg":  "#fff7ed",
+        "btn_bg":    "#ea580c",
+        "btn_text":  "#ffffff",
+        "dot":       "#c2410c",
+    },
+    "❄️ 겨울": {
+        "bg":        "#f0f4ff",
+        "sidebar":   "#dbe4ff",
+        "msg_user":  "#a5b4fc",
+        "msg_ai":    "#f8f9ff",
+        "accent":    "#3730a3",
+        "text":      "#1e1b4b",
+        "border":    "#818cf8",
+        "input_bg":  "#f0f4ff",
+        "btn_bg":    "#4f46e5",
+        "btn_text":  "#ffffff",
+        "dot":       "#3730a3",
+    },
+    "🌙 밤": {
+        "bg":        "#0f0f1a",
+        "sidebar":   "#1a1a2e",
+        "msg_user":  "#2d2b55",
+        "msg_ai":    "#16213e",
+        "accent":    "#a78bfa",
+        "text":      "#e2e8f0",
+        "border":    "#4c1d95",
+        "input_bg":  "#1a1a2e",
+        "btn_bg":    "#7c3aed",
+        "btn_text":  "#ffffff",
+        "dot":       "#a78bfa",
+    },
+    "🌿 숲": {
+        "bg":        "#f0fdf4",
+        "sidebar":   "#dcfce7",
+        "msg_user":  "#86efac",
+        "msg_ai":    "#f7fef9",
+        "accent":    "#166534",
+        "text":      "#052e16",
+        "border":    "#4ade80",
+        "input_bg":  "#f0fdf4",
+        "btn_bg":    "#16a34a",
+        "btn_text":  "#ffffff",
+        "dot":       "#166534",
+    },
+}
+
+BASE_CSS = """
+<style>
+/* ── layout ── */
+[data-testid="stAppViewContainer"] {{
+    background-color: {bg} !important;
+    color: {text} !important;
+}}
+[data-testid="stSidebar"] {{
+    background-color: {sidebar} !important;
+}}
+[data-testid="stSidebar"] * {{ color: {text} !important; }}
+
+/* ── chat bubbles ── */
+[data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) {{
+    background-color: {msg_user} !important;
+    border: 1px solid {border};
+    border-radius: 16px;
+}}
+[data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarAssistant"]) {{
+    background-color: {msg_ai} !important;
+    border: 1px solid {border};
+    border-radius: 16px;
+}}
+
+/* ── inputs ── */
+[data-testid="stTextInput"] input,
+[data-testid="stChatInput"] textarea {{
+    background-color: {input_bg} !important;
+    color: {text} !important;
+    border-color: {border} !important;
+}}
+
+/* ── buttons ── */
+[data-testid="stButton"] > button {{
+    background-color: {btn_bg} !important;
+    color: {btn_text} !important;
+    border: none !important;
+    border-radius: 8px !important;
+}}
+
+/* ── typing dots ── */
+.typing-indicator span {{ background: {dot} !important; }}
+
+/* ── expander / divider accent ── */
+[data-testid="stExpander"] {{
+    border: 1px solid {border} !important;
+    border-radius: 10px !important;
+}}
+hr {{ border-color: {border} !important; }}
+</style>
+"""
+
 TYPING_CSS = """
 <style>
 .typing-indicator {
@@ -19,7 +153,7 @@ TYPING_CSS = """
 .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
 @keyframes bounce {
     0%, 80%, 100% { transform: scale(0.7); opacity: 0.5; }
-    40% { transform: scale(1.1); opacity: 1; }
+    40%            { transform: scale(1.1); opacity: 1;   }
 }
 .sticker {
     font-size: 72px;
@@ -82,6 +216,10 @@ with st.sidebar:
 
     st.divider()
 
+    theme_name = st.selectbox("테마", options=list(THEMES.keys()), index=0)
+
+    st.divider()
+
     if st.button("Clear chat", use_container_width=True):
         st.session_state.messages = []
         st.rerun()
@@ -114,7 +252,9 @@ with st.sidebar:
     )
 
 # ── Apply CSS ──────────────────────────────────────────────────────────────────
+theme = THEMES[theme_name]
 st.markdown(TYPING_CSS, unsafe_allow_html=True)
+st.markdown(BASE_CSS.format(**theme), unsafe_allow_html=True)
 
 # ── Main ───────────────────────────────────────────────────────────────────────
 st.title("💬 Chatbot")
@@ -138,7 +278,11 @@ else:
 
     # ── Map ────────────────────────────────────────────────────────────────────
     with st.expander("🗺️ 지도 검색", expanded=False):
-        location_query = st.text_input("장소를 입력하세요", placeholder="예: 경복궁, 도쿄 타워, Eiffel Tower", key="map_query")
+        location_query = st.text_input(
+            "장소를 입력하세요",
+            placeholder="예: 경복궁, 도쿄 타워, Eiffel Tower",
+            key="map_query",
+        )
         search_clicked = st.button("검색", key="map_search")
 
         if "map_location" not in st.session_state:
