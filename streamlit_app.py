@@ -16,7 +16,7 @@ with st.sidebar:
 
     model = st.selectbox(
         "Model",
-        options=["gpt-4o-mini", "gpt-4o", "gpt-3.5-turbo"],
+        options=["gpt-5.5", "gpt-5.5-instant", "gpt-4o-mini", "gpt-4o", "gpt-3.5-turbo"],
         index=0,
     )
 
