@@ -2,24 +2,6 @@ import json
 import streamlit as st
 from openai import OpenAI
 
-# ── Dark / Light mode CSS ──────────────────────────────────────────────────────
-DARK_CSS = """
-<style>
-[data-testid="stAppViewContainer"] { background-color: #1e1e2e; color: #cdd6f4; }
-[data-testid="stSidebar"] { background-color: #181825; }
-[data-testid="stChatMessage"] { background-color: #313244; border-radius: 10px; }
-.stTextInput input, .stSelectbox div { background-color: #313244 !important; color: #cdd6f4 !important; }
-</style>
-"""
-
-LIGHT_CSS = """
-<style>
-[data-testid="stAppViewContainer"] { background-color: #ffffff; color: #1e1e2e; }
-[data-testid="stSidebar"] { background-color: #f4f4f5; }
-[data-testid="stChatMessage"] { background-color: #f0f0f5; border-radius: 10px; }
-</style>
-"""
-
 TYPING_CSS = """
 <style>
 .typing-indicator {
@@ -72,10 +54,6 @@ with st.sidebar:
 
     st.divider()
 
-    dark_mode = st.toggle("Dark mode", value=False)
-
-    st.divider()
-
     if st.button("Clear chat", use_container_width=True):
         st.session_state.messages = []
         st.rerun()
@@ -109,7 +87,6 @@ with st.sidebar:
 
 # ── Apply theme CSS ────────────────────────────────────────────────────────────
 st.markdown(TYPING_CSS, unsafe_allow_html=True)
-st.markdown(DARK_CSS if dark_mode else LIGHT_CSS, unsafe_allow_html=True)
 
 # ── Main ───────────────────────────────────────────────────────────────────────
 st.title("💬 Chatbot")
