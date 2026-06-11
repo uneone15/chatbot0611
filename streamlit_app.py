@@ -1,56 +1,97 @@
+import json
 import streamlit as st
 from openai import OpenAI
 
-# Show title and description.
 st.title("💬 Chatbot")
 st.write(
-    "This is a simple chatbot that uses OpenAI's GPT-3.5 model to generate responses. "
-    "To use this app, you need to provide an OpenAI API key, which you can get [here](https://platform.openai.com/account/api-keys). "
-    "You can also learn how to build this app step by step by [following our tutorial](https://docs.streamlit.io/develop/tutorials/llms/build-conversational-apps)."
+    "This is a simple chatbot using OpenAI's models. "
+    "To use this app, you need to provide an OpenAI API key, which you can get [here](https://platform.openai.com/account/api-keys)."
 )
 
-# Ask user for their OpenAI API key via `st.text_input`.
-# Alternatively, you can store the API key in `./.streamlit/secrets.toml` and access it
-# via `st.secrets`, see https://docs.streamlit.io/develop/concepts/connections/secrets-management
-openai_api_key = st.text_input("OpenAI API Key", type="password")
-if not openai_api_key:
-    st.info("Please add your OpenAI API key to continue.", icon="🗝️")
-else:
+# Sidebar settings
+with st.sidebar:
+    st.header("Settings")
 
-    # Create an OpenAI client.
+    openai_api_key = st.text_input("OpenAI API Key", type="password")
+
+    model = st.selectbox(
+        "Model",
+        options=["gpt-4o-mini", "gpt-4o", "gpt-3.5-turbo"],
+        index=0,
+    )
+
+    temperature = st.slider(
+        "Temperature",
+        min_value=0.0,
+        max_value=2.0,
+        value=0.7,
+        step=0.1,
+        help="낮을수록 일관된 답변, 높을수록 창의적인 답변",
+    )
+
+    st.divider()
+
+    if st.button("Clear chat", use_container_width=True):
+        st.session_state.messages = []
+        st.rerun()
+
+    st.divider()
+    st.subheader("Export chat")
+
+    messages = st.session_state.get("messages", [])
+
+    txt_content = "\n\n".join(
+        f"[{m['role'].upper()}]\n{m['content']}" for m in messages
+    )
+    st.download_button(
+        label="Download .txt",
+        data=txt_content,
+        file_name="chat_history.txt",
+        mime="text/plain",
+        disabled=not messages,
+        use_container_width=True,
+    )
+
+    json_content = json.dumps(messages, ensure_ascii=False, indent=2)
+    st.download_button(
+        label="Download .json",
+        data=json_content,
+        file_name="chat_history.json",
+        mime="application/json",
+        disabled=not messages,
+        use_container_width=True,
+    )
+
+if not openai_api_key:
+    st.info("Please add your OpenAI API key in the sidebar to continue.", icon="🗝️")
+else:
     client = OpenAI(api_key=openai_api_key)
 
-    # Create a session state variable to store the chat messages. This ensures that the
-    # messages persist across reruns.
     if "messages" not in st.session_state:
         st.session_state.messages = []
 
-    # Display the existing chat messages via `st.chat_message`.
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
 
-    # Create a chat input field to allow the user to enter a message. This will display
-    # automatically at the bottom of the page.
     if prompt := st.chat_input("What is up?"):
-
-        # Store and display the current prompt.
         st.session_state.messages.append({"role": "user", "content": prompt})
         with st.chat_message("user"):
             st.markdown(prompt)
 
-        # Generate a response using the OpenAI API.
-        stream = client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": m["role"], "content": m["content"]}
-                for m in st.session_state.messages
-            ],
-            stream=True,
-        )
+        try:
+            stream = client.chat.completions.create(
+                model=model,
+                messages=[
+                    {"role": m["role"], "content": m["content"]}
+                    for m in st.session_state.messages
+                ],
+                temperature=temperature,
+                stream=True,
+            )
+            with st.chat_message("assistant"):
+                response = st.write_stream(stream)
+            st.session_state.messages.append({"role": "assistant", "content": response})
 
-        # Stream the response to the chat using `st.write_stream`, then store it in 
-        # session state.
-        with st.chat_message("assistant"):
-            response = st.write_stream(stream)
-        st.session_state.messages.append({"role": "assistant", "content": response})
+        except Exception as e:
+            st.error(f"Error: {e}", icon="🚨")
